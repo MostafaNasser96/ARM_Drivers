@@ -32,9 +32,33 @@
 #ifndef FALSE
    #define FALSE  0u
 #endif
+#ifndef ENABLE
+   #define ENABLE   1u
+#endif
+
+#ifndef DISABLE
+   #define DISABLE  0u
+#endif
 
 #define CPU_BIT_ORDER    LSB_FIRST        /*little endian bit ordering*/
 #define CPU_BYTE_ORDER   LOW_BYTE_FIRST   /*little endian byte ordering*/
+
+/*____HARDWARE CFG____*/
+
+#define REGISTER_LENGTH_BITS 32
+
+#define REGISTER_LENGTH_BYTS 4
+
+/*Bit Banding Equations */
+/*bit-band alias = bit-band base + (byte offset * 32) + (bit number * 4)    */
+#define BIT_BANDING(MEMORY_BASE_ADD , BASE_ALIAS, PERIPHIRAL_BASE_ADD ,BYTE_OFFSET,BIT_NUMBER,VALUE) (*(volatile uint32*)(BASE_ALIAS + (((BYTE_OFFSET+ PERIPHIRAL_BASE_ADD) - MEMORY_BASE_ADD) * REGISTER_LENGTH_BITS) + ((uint32)BIT_NUMBER * REGISTER_LENGTH_BYTS))) = VALUE
+
+#define BIT_GROUP_BANDING(MEMORY_BASE_ADD , BASE_ALIAS , PERIPHIRAL_BASE_ADD , BYTE_OFFSET , BIT_NUMBER_START , BIT_NUMBER_END , VALUE)     while ( BIT_NUMBER_END >= BIT_NUMBER_START)                 \
+                                                                                                                                                        {                                                           \
+                                                                                                                                                            BIT_BANDING(MEMORY_BASE_ADD , BASE_ALIAS, PERIPHIRAL_BASE_ADD,BYTE_OFFSET,BIT_NUMBER_END,((VALUE >> (BIT_NUMBER_END - BIT_NUMBER_START) ) & 0x1 ));\
+                                                                                                                                                            BIT_NUMBER_END--;  \
+                                                                                                                                                        }
+
 
 /**********************************************************************************************************************
  *  GLOBAL FUNCTION MACROS
