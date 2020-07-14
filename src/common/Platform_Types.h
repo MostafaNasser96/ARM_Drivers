@@ -43,6 +43,8 @@
 #define CPU_BIT_ORDER    LSB_FIRST        /*little endian bit ordering*/
 #define CPU_BYTE_ORDER   LOW_BYTE_FIRST   /*little endian byte ordering*/
 
+#define NULL_PTR    0
+
 /*____HARDWARE CFG____*/
 
 #define REGISTER_LENGTH_BITS 32
@@ -56,7 +58,14 @@
 #define BIT_GROUP_BANDING(MEMORY_BASE_ADD , BASE_ALIAS , PERIPHIRAL_BASE_ADD , BYTE_OFFSET , BIT_NUMBER_START , BIT_NUMBER_END , VALUE)     while ( BIT_NUMBER_END >= BIT_NUMBER_START)                 \
                                                                                                                                                         {                                                           \
                                                                                                                                                             BIT_BANDING(MEMORY_BASE_ADD , BASE_ALIAS, PERIPHIRAL_BASE_ADD,BYTE_OFFSET,BIT_NUMBER_END,((VALUE >> (BIT_NUMBER_END - BIT_NUMBER_START) ) & 0x1 ));\
-                                                                                                                                                            BIT_NUMBER_END--;  \
+                                                                                                                                                            if(BIT_NUMBER_END == 0)   \
+                                                                                                                                                            {                          \
+                                                                                                                                                                BIT_NUMBER_START ++ ;  \
+                                                                                                                                                            } \
+                                                                                                                                                            else   \
+                                                                                                                                                            {      \
+                                                                                                                                                                BIT_NUMBER_END -- ;  \
+                                                                                                                                                            } \
                                                                                                                                                         }
 
 
@@ -76,7 +85,7 @@ typedef signed short          sint16;        /*      -32768 .. +32767          *
 typedef unsigned short        uint16;        /*           0 .. 65535           */
 typedef signed long           sint32;        /* -2147483648 .. +2147483647     */
 typedef unsigned long         uint32;        /*           0 .. 4294967295      */
-
+typedef unsigned  long long  uint64;
 typedef float                 float32;
 typedef double                float64;
 
