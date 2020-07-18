@@ -15,4 +15,6 @@
 
 #define GPT_PREDEF_TIMER_CHANNEL            GPT_16_32_BIT_TIMER_1
 
+#define GPT_SYSTEM_FREQUENCY_MHz            16
+
 #endif /* GPT_CFG_H_ */

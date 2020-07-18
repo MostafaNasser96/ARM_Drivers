@@ -84,10 +84,10 @@ typedef struct
 
 typedef enum
 {
-    GPT_PREDEF_TIMER_1US_16BIT ,
-    GPT_PREDEF_TIMER_1US_24BIT ,
-    GPT_PREDEF_TIMER_1US_32BIT ,
-    GPT_PREDEF_TIMER_100US_32BIT
+    GPT_PREDEF_TIMER_1US_16_BIT ,
+    GPT_PREDEF_TIMER_1US_24_BIT ,
+    GPT_PREDEF_TIMER_1US_32_BIT ,
+    GPT_PREDEF_TIMER_100US_32_BIT
 
 }Gpt_PredefTimer;
 /******************************************************************************

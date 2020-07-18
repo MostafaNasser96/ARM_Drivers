@@ -8,7 +8,7 @@
 #include "Gpt.h"
 #include "Gpt_Cfg.h"
 
-#define GPT_NO_OF_CHANNELS              12
+#define GPT_NO_OF_CHANNELS              12   /*Number of Timers */
 
 
 #define GPT_CFG_REG(BASE_ADDRESS)     (*(volatile uint32 *) ( BASE_ADDRESS ))
@@ -19,59 +19,66 @@
 
 #define GPT_PERIODIC_MODE   1
 
-#define MAX_16_BIT                          65535
-#define MAX_24_BIT                          16777215
-#define MAX_32_BIT                          4294967295
-#define MAX_48_BIT                          281474976710655
+#define MAX_16_BIT                          65535               /*MAX of 16 bit*/
+#define MAX_24_BIT                          16777215            /*MAX of 24 bit*/
+#define MAX_32_BIT                          4294967295          /*MAX of 32 bit*/
+#define MAX_48_BIT                          281474976710655     /*MAX of 48 bit*/
 
+/*Timer Channel Modes____________________________*/
+/*Individual Modes*/
 #define GPT_INDIVIDUAL_MODE_16_BIT            1
 #define GPT_INDIVIDUAL_MODE_24_BIT            2
 #define GPT_INDIVIDUAL_MODE_32_BIT            3
 #define GPT_INDIVIDUAL_MODE_48_BIT            4
+/*Concatenated Modes*/
 #define GPT_CONCATENATED_MODE_32_BIT          5
 #define GPT_CONCATENATED_MODE_64_BIT          6
 
 
 
-static uint8 g_CheckInit = E_NOT_OK;
+static uint8 g_CheckInit = E_NOT_OK;                        /*Check if Gpt Init is Initialized in Correct Way*/
 
-static uint8 g_ChannelMode[GPT_NO_OF_CHANNELS] = {0} ;
+static uint8 g_ChannelMode[GPT_NO_OF_CHANNELS] = {0} ;      /*Check Channel Mode*/
 
-static uint8 g_ChannelTarget[GPT_NO_OF_CHANNELS] = {0} ;
+static uint8 g_ChannelTarget[GPT_NO_OF_CHANNELS] = {0} ;    /*Get Target of Channel*/
 
-static uint32 g_Base_Address[GPT_NO_OF_CHANNELS] = {0};
-static uint32 g_Base_PreDefAddress ;
+static uint32 g_Base_Address[GPT_NO_OF_CHANNELS] = {0};     /*save Base Address*/
+
+static uint32 g_Base_PreDefAddress ;                        /*Predefined Timers Base Address*/
+
 static uint8  g_PreDef_OneTime = E_OK ;
 
-static uint8 g_No_Of_Bits[GPT_NO_OF_CHANNELS] = {0};
+static uint8 g_No_Of_Bits[GPT_NO_OF_CHANNELS] = {0};       /*Number of Bits to Return*/
 
-static Gpt_ConfigType g_arrUsedChannels[GPT_NO_OF_CHANNELS] = {0};
+static uint8 g_No_Of_FrequencyShift[GPT_NO_OF_CHANNELS] = {0};  /*Which bits to return*/
 
-static void (*CallBack_0_Ptr) (void) = 0;
-static void (*CallBack_1_Ptr) (void) = 0;
-static void (*CallBack_2_Ptr) (void) = 0;
-static void (*CallBack_3_Ptr) (void) = 0;
-static void (*CallBack_4_Ptr) (void) = 0;
-static void (*CallBack_5_Ptr) (void) = 0;
-static void (*CallBack_W_0_Ptr) (void)= 0 ;
-static void (*CallBack_W_1_Ptr) (void)= 0 ;
-static void (*CallBack_W_2_Ptr) (void)= 0 ;
-static void (*CallBack_W_3_Ptr) (void)= 0 ;
-static void (*CallBack_W_4_Ptr) (void)= 0 ;
-static void (*CallBack_W_5_Ptr) (void)= 0 ;
+static Gpt_ConfigType g_arrUsedChannels[GPT_NO_OF_CHANNELS] = {0};  /*To Check no Channel used more than once*/
 
- void Timer0_W_Handler(void);
- void Timer1_W_Handler(void);
- void Timer2_W_Handler(void);
- void Timer3_W_Handler(void);
- void Timer4_W_Handler(void);
- void Timer5_W_Handler(void);
- void Timer0_Handler(void);
- void Timer1_Handler(void);
- void Timer2_Handler(void);
- void Timer3_Handler(void);
- void Timer4_Handler(void);
- void Timer5_Handler(void);
+static void (*CallBack_0_Ptr) (void) = 0;         /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_1_Ptr) (void) = 0;         /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_2_Ptr) (void) = 0;         /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_3_Ptr) (void) = 0;         /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_4_Ptr) (void) = 0;         /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_5_Ptr) (void) = 0;         /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_W_0_Ptr) (void)= 0 ;       /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_W_1_Ptr) (void)= 0 ;       /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_W_2_Ptr) (void)= 0 ;       /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_W_3_Ptr) (void)= 0 ;       /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_W_4_Ptr) (void)= 0 ;       /*Pointer To Function Used in CallBack function*/
+static void (*CallBack_W_5_Ptr) (void)= 0 ;       /*Pointer To Function Used in CallBack function*/
+
+ void Timer0_W_Handler(void);                    /*Handler Functions */
+ void Timer1_W_Handler(void);                    /*Handler Functions */
+ void Timer2_W_Handler(void);                    /*Handler Functions */
+ void Timer3_W_Handler(void);                    /*Handler Functions */
+ void Timer4_W_Handler(void);                    /*Handler Functions */
+ void Timer5_W_Handler(void);                    /*Handler Functions */
+ void Timer0_Handler(void);                      /*Handler Functions */
+ void Timer1_Handler(void);                      /*Handler Functions */
+ void Timer2_Handler(void);                      /*Handler Functions */
+ void Timer3_Handler(void);                      /*Handler Functions */
+ void Timer4_Handler(void);                      /*Handler Functions */
+ void Timer5_Handler(void);                      /*Handler Functions */
 
 
 /******************************************************************************
@@ -86,113 +93,118 @@ static void (*CallBack_W_5_Ptr) (void)= 0 ;
 *******************************************************************************/
 void Gpt_Init( const Gpt_ConfigType* ConfigPtr)
 {
-    uint32 Bit_BandStart, Bit_BandEnd ;
+    uint32 Bit_BandStart, Bit_BandEnd , FrequencyDvivsor , FrequencyCounter = 1 ;
 
-    if(ConfigPtr != NULL_PTR)
+    if(ConfigPtr != NULL_PTR)   /*Check Pointer is not pointing to Null*/
     {
-        if(g_arrUsedChannels[ConfigPtr->channel_ID].channel_ID == 0 )
+        if(g_arrUsedChannels[ConfigPtr->channel_ID].channel_ID == 0 ) /*If the channel is not Used before*/
         {
 
-            g_arrUsedChannels[ConfigPtr->channel_ID].channel_ID = ConfigPtr->channel_ID ;
-            g_arrUsedChannels[ConfigPtr->channel_ID].channel_Mode = ConfigPtr->channel_Mode ;
-            g_arrUsedChannels[ConfigPtr->channel_ID].channel_MaxTicks = ConfigPtr->channel_MaxTicks;
-            g_arrUsedChannels[ConfigPtr->channel_ID].channel_Frequency = ConfigPtr->channel_Frequency;
+            g_arrUsedChannels[ConfigPtr->channel_ID].channel_ID = ConfigPtr->channel_ID ;               /*Save Channel Configuration */
+            g_arrUsedChannels[ConfigPtr->channel_ID].channel_Mode = ConfigPtr->channel_Mode ;           /*Save Channel Configuration */
+            g_arrUsedChannels[ConfigPtr->channel_ID].channel_MaxTicks = ConfigPtr->channel_MaxTicks;    /*Save Channel Configuration */
+            g_arrUsedChannels[ConfigPtr->channel_ID].channel_Frequency = ConfigPtr->channel_Frequency;  /*Save Channel Configuration */
 
-            if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_0)
+            if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_0)                                  /*If Channel ID is Timer 0*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_0_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_0_BASE ;            /*Timer Base Address*/
 
-                CallBack_0_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_0_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                               /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_1)
+            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_1)                             /*If Channel ID is Timer 1*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_1_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_1_BASE ;            /*Timer Base Address*/
 
-                CallBack_1_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_1_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                               /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_2)
+            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_2)                             /*If Channel ID is Timer 2*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_2_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_2_BASE ;            /*Timer Base Address*/
 
-                CallBack_2_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_2_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                               /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_3)
+            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_3)                             /*If Channel ID is Timer 3*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_3_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_3_BASE ;            /*Timer Base Address*/
 
-                CallBack_3_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_3_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                               /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_4)
+            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_4)                             /*If Channel ID is Timer 4*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_4_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_4_BASE ;            /*Timer Base Address*/
 
-                CallBack_4_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_4_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                               /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_5)
+            else if(ConfigPtr->channel_ID == GPT_16_32_BIT_TIMER_5)                             /*If Channel ID is Timer 5*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_5_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_16_32_BIT_TIMER_5_BASE ;            /*Timer Base Address*/
 
-                CallBack_5_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_5_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                               /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_0)
+            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_0)                        /*If Channel ID is W Timer 0*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_0_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_0_BASE ;       /*Timer Base Address*/
 
-                CallBack_W_0_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_W_0_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                             /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_1)
+            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_1)                        /*If Channel ID is W Timer 1*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_1_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_1_BASE ;       /*Timer Base Address*/
 
-                CallBack_W_1_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_W_1_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                             /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_2)
+            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_2)                        /*If Channel ID is W Timer 2*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_2_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_2_BASE ;       /*Timer Base Address*/
 
-                CallBack_W_2_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_W_2_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                             /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_3)
+            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_3)                        /*If Channel ID is W Timer 3*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_3_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_3_BASE ;       /*Timer Base Address*/
 
-                CallBack_W_3_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_W_3_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                             /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_4)
+            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_4)                        /*If Channel ID is W Timer 4*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_4_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_4_BASE ;       /*Timer Base Address*/
 
-                CallBack_W_4_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_W_4_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                             /*Use Call Back Pointer to function */
             }
-            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_5)
+            else if(ConfigPtr->channel_ID == GPT_32_64_BIT_WIDE_TIMER_5)                        /*If Channel ID is W Timer 5*/
             {
-                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_5_BASE ;
+                g_Base_Address[ConfigPtr->channel_ID] = GPT_32_64_BIT_WIDE_TIMER_5_BASE ;       /*Timer Base Address*/
 
-                CallBack_W_5_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;
+                CallBack_W_5_Ptr = ConfigPtr->Gpt_PtrCallBack_Fnc ;                             /*Use Call Back Pointer to function */
             }
 
             /*Ensure the timer is disabled (the TnEN bit in the GPTMCTL register is cleared) before making any changes*/
+
             BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[ConfigPtr->channel_ID] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_LOW);
             BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[ConfigPtr->channel_ID] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_B,STD_LOW);
 
             /*Write the GPTM Configuration Register (GPTMCFG) with a value of 0x0000.0000*/
+
             GPT_CFG_REG(g_Base_Address[ConfigPtr->channel_ID]) = 0 ;
 
             Bit_BandStart = GPT_TIMER_MODE_START ;
             Bit_BandEnd   = GPT_TIMER_MODE_END   ;
 
             /*Set Channel A to chosen Mode Periodic or One Shot Mode*/
+
             BIT_GROUP_BANDING(GPT_PRIVATE_PRI_BASE_ADD , GPT_PRIVATE_PRI_BASE_ALIAS , g_Base_Address[ConfigPtr->channel_ID] , GPT_TIMER_A_MODE_OFFSET , Bit_BandStart , Bit_BandEnd ,ConfigPtr->channel_Mode);
 
             /*Disable Notification */
+
             BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[ConfigPtr->channel_ID] ,GPT_INTERRUPT_MASK_OFFSET ,GPT_INTERRUPT_B_TIME_OUT,STD_LOW);
             BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[ConfigPtr->channel_ID] ,GPT_INTERRUPT_MASK_OFFSET ,GPT_INTERRUPT_A_TIME_OUT,STD_LOW);
+
 
             /*Find Number of Bits in Max Ticks */
 
             g_No_Of_Bits[ConfigPtr->channel_ID] = 0;
 
-            while(ConfigPtr->channel_MaxTicks != FALSE)
+            while(g_arrUsedChannels[ConfigPtr->channel_ID].channel_MaxTicks != FALSE)
             {
                 g_No_Of_Bits[ConfigPtr->channel_ID]++;
 
@@ -202,61 +214,76 @@ void Gpt_Init( const Gpt_ConfigType* ConfigPtr)
 
             g_arrUsedChannels[ConfigPtr->channel_ID].channel_MaxTicks = ConfigPtr->channel_MaxTicks;
 
-            g_CheckInit = E_OK;
+            /*Find Number of Shifts */
 
-            if(g_PreDef_OneTime == E_OK)
+            FrequencyDvivsor = GPT_SYSTEM_FREQUENCY_MHz / g_arrUsedChannels[ConfigPtr->channel_ID].channel_Frequency ;
+
+            g_No_Of_FrequencyShift[ConfigPtr->channel_ID] = 0 ;
+
+            while(FrequencyDvivsor > FrequencyCounter)
+            {
+                FrequencyCounter *= 2;
+
+                g_No_Of_FrequencyShift[ConfigPtr->channel_ID]++ ;
+            }
+
+
+            g_CheckInit = E_OK;         /*Init Function Completed */
+
+            if(g_PreDef_OneTime == E_OK)        /*Init Predefined Timers only One Time A*/
             {
 
-                if(GPT_PREDEF_TIMER_CHANNEL== GPT_16_32_BIT_TIMER_0)
+                if(GPT_PREDEF_TIMER_CHANNEL== GPT_16_32_BIT_TIMER_0)                            /*If Channel ID is Timer 0*/
                 {
                     g_Base_PreDefAddress = GPT_16_32_BIT_TIMER_0_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_1)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_1)                      /*If Channel ID is Timer 1*/
                 {
                     g_Base_PreDefAddress = GPT_16_32_BIT_TIMER_1_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_2)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_2)                      /*If Channel ID is Timer 2*/
                 {
                     g_Base_PreDefAddress = GPT_16_32_BIT_TIMER_2_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_3)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_3)                      /*If Channel ID is Timer 3*/
                 {
                     g_Base_PreDefAddress = GPT_16_32_BIT_TIMER_3_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_4)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_4)                      /*If Channel ID is Timer 4*/
                 {
                     g_Base_PreDefAddress = GPT_16_32_BIT_TIMER_4_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_5)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_16_32_BIT_TIMER_5)                      /*If Channel ID is Timer 5*/
                 {
                     g_Base_PreDefAddress = GPT_16_32_BIT_TIMER_5_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_0)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_0)                 /*If Channel ID is W Timer 0*/
                 {
                     g_Base_PreDefAddress = GPT_32_64_BIT_WIDE_TIMER_0_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_1)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_1)                 /*If Channel ID is W Timer 1*/
                 {
                     g_Base_PreDefAddress = GPT_32_64_BIT_WIDE_TIMER_1_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_2)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_2)                 /*If Channel ID is W Timer 2*/
                 {
                     g_Base_PreDefAddress = GPT_32_64_BIT_WIDE_TIMER_2_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_3)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_3)                 /*If Channel ID is W Timer 3*/
                 {
                     g_Base_PreDefAddress = GPT_32_64_BIT_WIDE_TIMER_3_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_4)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_4)                 /*If Channel ID is W Timer 4*/
                 {
                     g_Base_PreDefAddress = GPT_32_64_BIT_WIDE_TIMER_4_BASE ;
                 }
-                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_5)
+                else if(GPT_PREDEF_TIMER_CHANNEL == GPT_32_64_BIT_WIDE_TIMER_5)                 /*If Channel ID is W Timer 5*/
                 {
                     g_Base_PreDefAddress = GPT_32_64_BIT_WIDE_TIMER_5_BASE ;
                 }
 
                 #if(GPT_PREDEF_TIMER_1US_16BIT == ENABLE || GPT_PREDEF_TIMER_1US_24BIT == ENABLE || GPT_PREDEF_TIMER_1US_32BIT == ENABLE || GPT_PREDEF_TIMER_100US_32BIT == ENABLE )
+
                     /*Ensure the timer is disabled (the TnEN bit in the GPTMCTL register is cleared) before making any changes*/
                     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_PreDefAddress ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_LOW);
                     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_PreDefAddress ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_B,STD_LOW);
@@ -371,8 +398,7 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
                   if(Value <= MAX_24_BIT )
                   {
 
-
-                      if(Value <= MAX_16_BIT )
+                      if(Value <= MAX_16_BIT )  /*In Case of 16 bit */
                       {
                           Bit_BandStart = GPT_CFG_START ;
                           Bit_BandEnd   = GPT_CFG_END   ;
@@ -384,7 +410,7 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
 
                           GPT_INTERVAL_LOAD_REG(g_Base_Address[Channel], GPT_TIMER_A_INTERVAL_LOAD_OFFSET) = (uint16) Value;
                       }
-                      else
+                      else  /*In Case of 24 Bit */
                       {
                           Bit_BandStart = GPT_CFG_START ;
                           Bit_BandEnd   = GPT_CFG_END   ;
@@ -486,7 +512,7 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
 
             g_ChannelTarget[Channel] = Value ;
 
-            BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_HIGH);
+            BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_HIGH);  /*Enable Timer */
             BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_B,STD_HIGH);
 
 
@@ -517,7 +543,7 @@ void Gpt_StopTimer( Gpt_ChannelType Channel )
 {
     if(g_CheckInit == E_OK)
     {
-        BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_LOW);
+        BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_LOW); /*Disable timer*/
         BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_B,STD_LOW);
     }
 }
@@ -534,30 +560,35 @@ void Gpt_StopTimer( Gpt_ChannelType Channel )
 *******************************************************************************/
 Gpt_ValueType Gpt_GetTimeElapsed( Gpt_ChannelType Channel )
 {
-    Gpt_ValueType u64_ElapsedTime , Value = 1;
-    uint32 u32_Power , TempValue ;
+    Gpt_ValueType u64_ElapsedTime , Value = 0 , FrequencyBits;
+    uint32  TempValue ;
 
-    u32_Power = g_No_Of_Bits[Channel];
+    FrequencyBits = g_No_Of_Bits[Channel];
 
-    while(u32_Power != 0)
+    FrequencyBits --;
+
+    while(FrequencyBits > 0)
     {
-        Value *= 2 ;
+        Value |= (1<<FrequencyBits);
 
-        u32_Power-- ;
+        FrequencyBits -- ;
     }
+
+    Value |= (1<<FrequencyBits);
+
     if(g_CheckInit == E_OK)
     {
         if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_16_BIT)
         {
-            u64_ElapsedTime =  (uint16) (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) & Value) ;
+            u64_ElapsedTime = (((uint16)GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET)) & (Value << g_No_Of_FrequencyShift[Channel])) ;
         }
         else if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_24_BIT)
         {
-            u64_ElapsedTime = (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) & Value);
+            u64_ElapsedTime = (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) & (Value << g_No_Of_FrequencyShift[Channel]));
         }
         else if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_32_BIT)
         {
-            u64_ElapsedTime = (uint32) (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) & Value);
+            u64_ElapsedTime = (((uint32)GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET)) & (Value << g_No_Of_FrequencyShift[Channel]));
         }
         else if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_48_BIT)
         {
@@ -570,7 +601,7 @@ Gpt_ValueType Gpt_GetTimeElapsed( Gpt_ChannelType Channel )
                 u64_ElapsedTime = (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET));
             }
             u64_ElapsedTime |= TempValue << REGISTER_LENGTH_BITS ;
-            u64_ElapsedTime &= Value ;
+            u64_ElapsedTime &= (Value << g_No_Of_FrequencyShift[Channel]) ;
         }
         else if(g_ChannelMode[Channel] == GPT_CONCATENATED_MODE_32_BIT)
         {
@@ -588,7 +619,7 @@ Gpt_ValueType Gpt_GetTimeElapsed( Gpt_ChannelType Channel )
             }
             u64_ElapsedTime |= TempValue << REGISTER_LENGTH_BITS ;
 
-            u64_ElapsedTime &= Value ;
+            u64_ElapsedTime &= (Value << g_No_Of_FrequencyShift[Channel]) ;
 
         }
 
@@ -634,36 +665,58 @@ Gpt_ValueType Gpt_GetTimeRemaining( Gpt_ChannelType Channel )
 *******************************************************************************/
 Std_ReturnType Gpt_GetPredefTimerValue( Gpt_PredefTimer TypePredefTimer, uint32* TimeValuePtr)
 {
-    uint8 u8_ErrorStatus = E_OK ;
-    uint32 TempValue ;
+    uint8 u8_ErrorStatus = E_OK  , FrequencyCounter = 1 , Value = 0;
+
+    uint32 TempValue ,FrequencyDvivsor;
+
+    if(TypePredefTimer == GPT_PREDEF_TIMER_1US_16_BIT || TypePredefTimer == GPT_PREDEF_TIMER_1US_24_BIT || TypePredefTimer == GPT_PREDEF_TIMER_1US_32_BIT)
+    {
+        FrequencyDvivsor = GPT_SYSTEM_FREQUENCY_MHz / 1  ;
+
+    }
+    else if (TypePredefTimer == GPT_PREDEF_TIMER_100US_32_BIT)
+    {
+        FrequencyDvivsor = (GPT_SYSTEM_FREQUENCY_MHz  / 1 ) * 100 ;
+    }
+
+    while(FrequencyDvivsor > FrequencyCounter)
+    {
+        FrequencyCounter *= 2;
+
+        Value++ ;
+    }
+
+
+    TempValue = ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)) ;
+
+     *TimeValuePtr = (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
+
+     while(TempValue != ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)))
+     {
+         TempValue = ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)) ;
+
+         *TimeValuePtr = (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
+     }
+
+     *TimeValuePtr |=  (TempValue <<  REGISTER_LENGTH_BITS);
 
     if(g_CheckInit == E_OK)
     {
-        if(TypePredefTimer == GPT_PREDEF_TIMER_1US_16BIT)
+        if(TypePredefTimer == GPT_PREDEF_TIMER_1US_16_BIT)
         {
-            *TimeValuePtr = (uint16) (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET) & 0x0000FFFF);
+            *TimeValuePtr &= (0x0000FFFF << Value);
         }
-        else if (TypePredefTimer == GPT_PREDEF_TIMER_1US_24BIT)
+        else if (TypePredefTimer == GPT_PREDEF_TIMER_1US_24_BIT)
         {
-            *TimeValuePtr = (uint16) (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET) & 0x01FFFFFF);
+            *TimeValuePtr &=  (0x01FFFFFF << Value);
         }
-        else if (TypePredefTimer == GPT_PREDEF_TIMER_1US_32BIT)
+        else if (TypePredefTimer == GPT_PREDEF_TIMER_1US_32_BIT)
         {
-            *TimeValuePtr = (uint32) (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
+            *TimeValuePtr &= (0xFFFFFFFF << Value);
         }
-        else if (TypePredefTimer == GPT_PREDEF_TIMER_100US_32BIT)
+        else if (TypePredefTimer == GPT_PREDEF_TIMER_100US_32_BIT)
         {
-            TempValue = ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)) ;
-
-            *TimeValuePtr = (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
-
-            while(TempValue != ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)))
-            {
-                TempValue = ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)) ;
-                *TimeValuePtr = (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
-            }
-            *TimeValuePtr = *TimeValuePtr >> 7 ;
-            *TimeValuePtr |= (uint32)(TempValue << 25) ;
+            *TimeValuePtr &= (0xFFFFFFFF << Value) ;
         }
         else
         {
