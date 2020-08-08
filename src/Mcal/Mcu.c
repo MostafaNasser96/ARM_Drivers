@@ -16,9 +16,9 @@
 #include "Mcu_Lcfg.h"
 /*_______________________________________________*/
 
-	
+
 #define MCU_APPINT_ADD 							                        *((volatile uint32*)(MCU_APINT_BASE_ADD + MCU_APINT_OFFSET))
-		
+
 #define MCU_RESET_CAUSE_ADD  					                        *((volatile uint32*)(MCU_BASE_ADDRESS + MCU_RESET_CAUSE_OFFSET))
 
 #define MCU_PLL_STAT_ADD                                                *((volatile uint32*)(MCU_BASE_ADDRESS + MCU_PLL_STAT_OFFSET))
@@ -112,7 +112,7 @@ MCU_ErrorReturn Mcu_InitClock( MCU_Clock_Type ClockSetting)
 {
 	uint8  u8_ErrorStatus 	= E_OK , loop , u8_CheckClockID = FALSE , Bit_BandStart , Bit_BandEnd ;
 	uint16  Sys_Div;              /*Calculate System Frequency Divisor*/
-	
+
 	if(g_InitCheck == E_OK)  /*Check it Init Function is Called and Configuration is seen to this Function*/
 	{
 		/*Clock Mode in RCC */
@@ -122,9 +122,10 @@ MCU_ErrorReturn Mcu_InitClock( MCU_Clock_Type ClockSetting)
 			{
 				g_ClockID = loop ;     /*Find Index of the Wanted ID*/
 				u8_CheckClockID = TRUE ;  /*Raise Flag */
+				loop = MCU_NUMBER_OF_CFGS ;
 			}
 		}
-			
+
 		if(u8_CheckClockID == TRUE)  /*Check if ID Exist */
 		{
 			if(g_CfgInitPtr[g_ClockID].clock_Mode == MCU_RUN_MODE ) /*If Entered Mode is Run Mode*/
@@ -139,7 +140,7 @@ MCU_ErrorReturn Mcu_InitClock( MCU_Clock_Type ClockSetting)
 			{
 				u8_ErrorStatus = E_NOT_OK ; /*Return Error*/
 			}
-			
+
 			if(u8_ErrorStatus == E_OK) /*Check if No Error Detected in previous Lines*/
 			{
 				if(g_CfgInitPtr[g_ClockID].clock_Source == MCU_CLOCK_SOURCE_MAIN_OSC)  /*If The Chosen Oscillator is Main External Oscillator */
@@ -168,38 +169,33 @@ MCU_ErrorReturn Mcu_InitClock( MCU_Clock_Type ClockSetting)
 
                     if(g_CfgInitPtr[g_ClockID].clock_Source == MCU_CLOCK_SOURCE_MAIN_OSC)
                     {
-                        if(g_CfgInitPtr[g_ClockID].Pll_Use == MCU_PLL_ENABLE)
-                        {
-                            BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC_OFFSET,MCU_RCC_USESYSDIV,STD_HIGH);  /*Enable Click division Bit this bit is forced to be set if we use PLL*/
-                        }
-                        else
-                        {
-                            /*Nothing*/
-                        }
+
+                        BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC_OFFSET,MCU_RCC_USESYSDIV,STD_HIGH);  /*Enable Click division Bit this bit is forced to be set if we use PLL*/
+
+                        BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
                         BIT_GROUP_BANDING(MCU_PRIVATE_PRI_BASE_ADD , MCU_PRIVATE_PRI_BASE_ALIAS , MCU_BASE_ADDRESS , MCU_RCC2_OFFSET , Bit_BandStart , Bit_BandEnd , MCU_CLOCK_SOURCE_MAIN_OSC);
                     }
                     else if (g_CfgInitPtr[g_ClockID].clock_Source == MCU_CLOCK_SOURCE_PREC_INT_OSC)
                     {
-                        if(g_CfgInitPtr[g_ClockID].Pll_Use == MCU_PLL_ENABLE)
-                        {
-                            BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC_OFFSET,MCU_RCC_USESYSDIV,STD_HIGH);   /*Enable Click division Bit this bit is forced to be set if we use PLL*/
-                        }
-                        else
-                        {
-                            /*Nothing*/
-                        }
+
+                        //BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC_OFFSET,MCU_RCC_USESYSDIV,STD_HIGH);   /*Enable Click division Bit this bit is forced to be set if we use PLL*/
+
+                        BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
                         BIT_GROUP_BANDING(MCU_PRIVATE_PRI_BASE_ADD , MCU_PRIVATE_PRI_BASE_ALIAS , MCU_BASE_ADDRESS , MCU_RCC2_OFFSET , Bit_BandStart , Bit_BandEnd , MCU_CLOCK_SOURCE_PREC_INT_OSC);
                     }
                     else if (g_CfgInitPtr[g_ClockID].clock_Source == MCU_CLOCK_SOURCE_PREC_INT_OSC_4) /*If Precision Oscillator is Selected */
                     {
+                        BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
                         BIT_GROUP_BANDING(MCU_PRIVATE_PRI_BASE_ADD , MCU_PRIVATE_PRI_BASE_ALIAS , MCU_BASE_ADDRESS , MCU_RCC2_OFFSET , Bit_BandStart , Bit_BandEnd , MCU_CLOCK_SOURCE_PREC_INT_OSC_4);
                     }
                     else if (g_CfgInitPtr[g_ClockID].clock_Source == MCU_CLOCK_SOURCE_LOW_FREQ_INT_OSC) /*If Precision Oscillator / 4 is Selected */
                     {
+                        BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
                         BIT_GROUP_BANDING(MCU_PRIVATE_PRI_BASE_ADD , MCU_PRIVATE_PRI_BASE_ALIAS , MCU_BASE_ADDRESS , MCU_RCC2_OFFSET , Bit_BandStart , Bit_BandEnd , MCU_CLOCK_SOURCE_LOW_FREQ_INT_OSC);
                     }
                     else if (g_CfgInitPtr[g_ClockID].clock_Source == MCU_CLOCK_SOURCE_32_768KHZ_EXT) /*If external 32.768 Oscillator is Selected */
                     {
+                        BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
                         BIT_GROUP_BANDING(MCU_PRIVATE_PRI_BASE_ADD , MCU_PRIVATE_PRI_BASE_ALIAS , MCU_BASE_ADDRESS , MCU_RCC2_OFFSET , Bit_BandStart , Bit_BandEnd , MCU_CLOCK_SOURCE_32_768KHZ_EXT);
                     }
                     else
@@ -292,7 +288,7 @@ MCU_ErrorReturn Mcu_InitClock( MCU_Clock_Type ClockSetting)
                         u8_ErrorStatus = E_NOT_OK; /*Error Status : Error */
                     }
 
-                    BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
+                   // BIT_BANDING(MCU_PRIVATE_PRI_BASE_ADD, MCU_PRIVATE_PRI_BASE_ALIAS, MCU_BASE_ADDRESS,MCU_RCC2_OFFSET,MCU_USE_RCC2,STD_HIGH); /*RCC2 Override RCC */
 
                 }
                 else

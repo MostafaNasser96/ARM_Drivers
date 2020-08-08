@@ -17,7 +17,7 @@
 
 #define GPT_COUNTER_VALUE_REG(BASE_ADDRESS, OFFSET)     (*(volatile uint32 *) ( BASE_ADDRESS + OFFSET ))
 
-#define GPT_PERIODIC_MODE   1
+#define GPT_PERIODIC_MODE   2
 
 #define MAX_16_BIT                          65535               /*MAX of 16 bit*/
 #define MAX_24_BIT                          16777215            /*MAX of 24 bit*/
@@ -40,7 +40,7 @@ static uint8 g_CheckInit = E_NOT_OK;                        /*Check if Gpt Init 
 
 static uint8 g_ChannelMode[GPT_NO_OF_CHANNELS] = {0} ;      /*Check Channel Mode*/
 
-static uint8 g_ChannelTarget[GPT_NO_OF_CHANNELS] = {0} ;    /*Get Target of Channel*/
+static uint64 g_ChannelTarget[GPT_NO_OF_CHANNELS] = {0} ;    /*Get Target of Channel*/
 
 static uint32 g_Base_Address[GPT_NO_OF_CHANNELS] = {0};     /*save Base Address*/
 
@@ -191,7 +191,8 @@ void Gpt_Init( const Gpt_ConfigType* ConfigPtr)
             Bit_BandEnd   = GPT_TIMER_MODE_END   ;
 
             /*Set Channel A to chosen Mode Periodic or One Shot Mode*/
-
+            BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[ConfigPtr->channel_ID] ,GPT_TIMER_A_MODE_OFFSET ,GPT_MODE_COUNT_DIRECTION,STD_HIGH);
+            BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[ConfigPtr->channel_ID] ,GPT_TIMER_B_MODE_OFFSET ,GPT_MODE_COUNT_DIRECTION,STD_HIGH);
             BIT_GROUP_BANDING(GPT_PRIVATE_PRI_BASE_ADD , GPT_PRIVATE_PRI_BASE_ALIAS , g_Base_Address[ConfigPtr->channel_ID] , GPT_TIMER_A_MODE_OFFSET , Bit_BandStart , Bit_BandEnd ,ConfigPtr->channel_Mode);
 
             /*Disable Notification */
@@ -295,7 +296,9 @@ void Gpt_Init( const Gpt_ConfigType* ConfigPtr)
                     Bit_BandEnd   = GPT_TIMER_MODE_END   ;
 
                     /*Set Channel A to chosen Mode Periodic or One Shot Mode*/
-                    BIT_GROUP_BANDING(GPT_PRIVATE_PRI_BASE_ADD , GPT_PRIVATE_PRI_BASE_ALIAS , g_Base_PreDefAddress , GPT_TIMER_A_MODE_OFFSET , Bit_BandStart , Bit_BandEnd ,GPT_PERIODIC_MODE);
+                    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_PreDefAddress ,GPT_TIMER_A_MODE_OFFSET ,GPT_MODE_COUNT_DIRECTION,STD_HIGH);
+                    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_PreDefAddress ,GPT_TIMER_B_MODE_OFFSET ,GPT_MODE_COUNT_DIRECTION,STD_HIGH);
+                    BIT_GROUP_BANDING(GPT_PRIVATE_PRI_BASE_ADD , GPT_PRIVATE_PRI_BASE_ALIAS , g_Base_PreDefAddress , GPT_TIMER_A_MODE_OFFSET , Bit_BandStart , Bit_BandEnd ,1);
 
                     /*Disable Notification */
                     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_PreDefAddress ,GPT_INTERRUPT_MASK_OFFSET ,GPT_INTERRUPT_B_TIME_OUT,STD_LOW);
@@ -310,6 +313,7 @@ void Gpt_Init( const Gpt_ConfigType* ConfigPtr)
                     GPT_INTERVAL_LOAD_REG(g_Base_PreDefAddress, GPT_TIMER_A_INTERVAL_LOAD_OFFSET) = 0xFFFFFFFF;
 
                     GPT_INTERVAL_LOAD_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_OFFSET) = 0x7FFF;
+
 
                     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_PreDefAddress ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_HIGH);
 
@@ -386,9 +390,9 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
 
     if(g_CheckInit == E_OK)
     {
-
         if(Value <= g_arrUsedChannels[Channel].channel_MaxTicks)
         {
+            Value = Value << g_No_Of_FrequencyShift[Channel] ;
             if(g_arrUsedChannels[Channel].channel_ID <=  GPT_16_32_BIT_TIMER_5)
             {
                   /*____________________________________________________
@@ -415,6 +419,8 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
                           Bit_BandStart = GPT_CFG_START ;
                           Bit_BandEnd   = GPT_CFG_END   ;
 
+
+
                           /*Set channel A to 24 bit Mode*/
                           BIT_GROUP_BANDING(GPT_PRIVATE_PRI_BASE_ADD , GPT_PRIVATE_PRI_BASE_ALIAS ,g_Base_Address[Channel] , GPT_CFG_OFFSET , Bit_BandStart , Bit_BandEnd ,GPT_CFG_16_BIT_TIMER);
 
@@ -422,6 +428,8 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
 
                           GPT_INTERVAL_LOAD_REG(g_Base_Address[Channel], GPT_TIMER_A_INTERVAL_LOAD_OFFSET) = (uint16) Value ;
                           GPT_INTERVAL_LOAD_REG(g_Base_Address[Channel], GPT_TIMER_A_PRESCALLER_OFFSET) = (uint8) (Value >> 16 ) ;
+
+
 
                       }
 
@@ -510,10 +518,11 @@ void Gpt_StartTimer( Gpt_ChannelType Channel, Gpt_ValueType Value )
             }
 
 
-            g_ChannelTarget[Channel] = Value ;
+            g_ChannelTarget[Channel] = Value >> g_No_Of_FrequencyShift[Channel] ;
 
-            BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_HIGH);  /*Enable Timer */
             BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_B,STD_HIGH);
+            BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, g_Base_Address[Channel] ,GPT_CONTROL_OFFSET ,GPT_CONTROL_EN_A,STD_HIGH);  /*Enable Timer */
+
 
 
         }
@@ -580,15 +589,15 @@ Gpt_ValueType Gpt_GetTimeElapsed( Gpt_ChannelType Channel )
     {
         if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_16_BIT)
         {
-            u64_ElapsedTime = (((uint16)GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET)) & (Value << g_No_Of_FrequencyShift[Channel])) ;
+            u64_ElapsedTime = (((uint16)(GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) >> g_No_Of_FrequencyShift[Channel])) & Value) ;
         }
         else if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_24_BIT)
         {
-            u64_ElapsedTime = (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) & (Value << g_No_Of_FrequencyShift[Channel]));
+            u64_ElapsedTime = (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) >> g_No_Of_FrequencyShift[Channel] ) & Value;
         }
         else if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_32_BIT)
         {
-            u64_ElapsedTime = (((uint32)GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET)) & (Value << g_No_Of_FrequencyShift[Channel]));
+            u64_ElapsedTime = (((uint32)(GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET) >> g_No_Of_FrequencyShift[Channel])) & Value) ;
         }
         else if(g_ChannelMode[Channel] == GPT_INDIVIDUAL_MODE_48_BIT)
         {
@@ -601,7 +610,8 @@ Gpt_ValueType Gpt_GetTimeElapsed( Gpt_ChannelType Channel )
                 u64_ElapsedTime = (GPT_COUNTER_VALUE_REG(g_Base_Address[Channel], GPT_TIMER_A_VALUE_OFFSET));
             }
             u64_ElapsedTime |= TempValue << REGISTER_LENGTH_BITS ;
-            u64_ElapsedTime &= (Value << g_No_Of_FrequencyShift[Channel]) ;
+            u64_ElapsedTime = u64_ElapsedTime >> g_No_Of_FrequencyShift[Channel] ;
+            u64_ElapsedTime &= (Value) ;
         }
         else if(g_ChannelMode[Channel] == GPT_CONCATENATED_MODE_32_BIT)
         {
@@ -619,7 +629,8 @@ Gpt_ValueType Gpt_GetTimeElapsed( Gpt_ChannelType Channel )
             }
             u64_ElapsedTime |= TempValue << REGISTER_LENGTH_BITS ;
 
-            u64_ElapsedTime &= (Value << g_No_Of_FrequencyShift[Channel]) ;
+            u64_ElapsedTime = u64_ElapsedTime >> g_No_Of_FrequencyShift[Channel] ;
+            u64_ElapsedTime &= (Value) ;
 
         }
 
@@ -646,6 +657,11 @@ Gpt_ValueType Gpt_GetTimeRemaining( Gpt_ChannelType Channel )
     if(g_CheckInit == E_OK)
     {
         u64_ElapsedTime = Gpt_GetTimeElapsed(Channel);
+
+        if(u64_ElapsedTime == 0 && g_arrUsedChannels[Channel].channel_Mode == GPT_ONE_SHOT_MODE)
+        {
+            u64_ElapsedTime = g_ChannelTarget[Channel];
+        }
 
         u64_RemainingTime = g_ChannelTarget[Channel] - u64_ElapsedTime  ;
     }
@@ -691,13 +707,6 @@ Std_ReturnType Gpt_GetPredefTimerValue( Gpt_PredefTimer TypePredefTimer, uint32*
 
      *TimeValuePtr = (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
 
-     while(TempValue != ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)))
-     {
-         TempValue = ((uint16) GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_PRESCALLER_VALUE_OFFSET)) ;
-
-         *TimeValuePtr = (GPT_COUNTER_VALUE_REG(g_Base_PreDefAddress, GPT_TIMER_A_VALUE_OFFSET));
-     }
-
      *TimeValuePtr |=  (TempValue <<  REGISTER_LENGTH_BITS);
 
     if(g_CheckInit == E_OK)
@@ -733,6 +742,8 @@ Std_ReturnType Gpt_GetPredefTimerValue( Gpt_PredefTimer TypePredefTimer, uint32*
 
  void Timer0_W_Handler(void)
 {
+     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_32_64_BIT_WIDE_TIMER_0_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_W_0_Ptr != 0)
     {
         CallBack_W_0_Ptr();
@@ -741,6 +752,8 @@ Std_ReturnType Gpt_GetPredefTimerValue( Gpt_PredefTimer TypePredefTimer, uint32*
 
 void Timer1_W_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_32_64_BIT_WIDE_TIMER_1_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_W_1_Ptr != 0)
     {
         CallBack_W_1_Ptr();
@@ -749,23 +762,29 @@ void Timer1_W_Handler(void)
 
  void Timer2_W_Handler(void)
 {
-    if(CallBack_W_2_Ptr != 0)
-    {
-        CallBack_W_2_Ptr();
-    }
+     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_32_64_BIT_WIDE_TIMER_2_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
+     if(CallBack_W_2_Ptr != 0)
+     {
+         CallBack_W_2_Ptr();
+     }
 
 }
 
  void Timer3_W_Handler(void)
 {
-    if(CallBack_W_3_Ptr != 0)
-    {
-        CallBack_W_3_Ptr();
-    }
+     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_32_64_BIT_WIDE_TIMER_3_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
+     if(CallBack_W_3_Ptr != 0)
+     {
+         CallBack_W_3_Ptr();
+     }
 }
 
 void Timer4_W_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_32_64_BIT_WIDE_TIMER_4_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_W_4_Ptr != 0)
     {
         CallBack_W_4_Ptr();
@@ -775,6 +794,8 @@ void Timer4_W_Handler(void)
 
 void Timer5_W_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_32_64_BIT_WIDE_TIMER_5_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_W_5_Ptr != 0)
     {
         CallBack_W_5_Ptr();
@@ -784,6 +805,8 @@ void Timer5_W_Handler(void)
 
 void Timer0_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_16_32_BIT_TIMER_0_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_0_Ptr != 0)
     {
         CallBack_0_Ptr();
@@ -793,6 +816,8 @@ void Timer0_Handler(void)
 
 void Timer1_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_16_32_BIT_TIMER_1_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_1_Ptr != 0)
     {
         CallBack_1_Ptr();
@@ -802,15 +827,19 @@ void Timer1_Handler(void)
 
  void Timer2_Handler(void)
 {
-    if(CallBack_2_Ptr != 0)
-    {
-        CallBack_2_Ptr();
-    }
+     BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_16_32_BIT_TIMER_2_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
+     if(CallBack_2_Ptr != 0)
+     {
+         CallBack_2_Ptr();
+     }
 
 }
 
 void Timer3_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_16_32_BIT_TIMER_3_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_3_Ptr != 0)
     {
         CallBack_3_Ptr();
@@ -819,6 +848,8 @@ void Timer3_Handler(void)
 
 void Timer4_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_16_32_BIT_TIMER_4_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_4_Ptr != 0)
     {
         CallBack_4_Ptr();
@@ -828,6 +859,8 @@ void Timer4_Handler(void)
 
 void Timer5_Handler(void)
 {
+    BIT_BANDING(GPT_PRIVATE_PRI_BASE_ADD, GPT_PRIVATE_PRI_BASE_ALIAS, GPT_16_32_BIT_TIMER_5_BASE ,GPT_INTERRUPT_CLEAR_OFFSET ,GPT_INTERRUPT_A_BIT , STD_HIGH);
+
     if(CallBack_5_Ptr != 0)
     {
         CallBack_5_Ptr();

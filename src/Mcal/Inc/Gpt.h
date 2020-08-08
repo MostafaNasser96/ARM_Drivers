@@ -61,7 +61,7 @@ typedef enum
 
 typedef enum
 {
-    GPT_ONE_SHOT_MODE ,
+    GPT_ONE_SHOT_MODE = 1 ,
 
     GPT_CONTINUOUS_MODE
 

@@ -14,7 +14,7 @@
 const Mcu_ConfigType MCU_CfgArr[MCU_NUMBER_OF_CFGS] = {
 	
 /* Clock ID	Clock Mode          		Clock Source 				PLL Status 		    	Frequency Value*/
- { 0,		MCU_RUN_MODE,	  	MCU_CLOCK_SOURCE_PREC_INT_OSC ,	 MCU_PLL_ENABLE ,               80  },
+ { 0,		MCU_RUN_MODE,	  	MCU_CLOCK_SOURCE_PREC_INT_OSC ,	 MCU_PLL_DISABLE ,              16  },
  { 1,		MCU_RUN_MODE,		MCU_CLOCK_SOURCE_MAIN_OSC     ,	 MCU_PLL_DISABLE,               80  },
  { 2,		MCU_RUN_MODE,  		MCU_CLOCK_SOURCE_MAIN_OSC     ,  MCU_PLL_ENABLE ,               40  },
  { 3,		MCU_RUN_MODE,  		MCU_CLOCK_SOURCE_32_768KHZ_EXT,  MCU_PLL_DISABLE,               80  }
@@ -24,10 +24,10 @@ const Mcu_ConfigType MCU_CfgArr[MCU_NUMBER_OF_CFGS] = {
 
 const Mcu_ModulesCfg ConfigModulesArr[MCU_NUMBER_OF_MODULES] = {
 /* Clock Mode                  Module Name                Module Port*/
- { MCU_RUN_MODE ,            MCU_GPIO_MODULE    ,         MCU_GPIO_PORT_A  },
- { MCU_RUN_MODE ,            MCU_GPIO_MODULE    ,         MCU_GPIO_PORT_B  },
- { MCU_RUN_MODE ,            MCU_UART_MODULE    ,         MCU_UART_0       },
- { MCU_RUN_MODE ,            MCU_TIMER_MODULE   ,         MCU_TIMER_0      },
+ { MCU_RUN_MODE ,            MCU_WTIMER_MODULE    ,         MCU_TIMER_0  },
+ { MCU_RUN_MODE ,            MCU_GPIO_MODULE    ,         MCU_GPIO_PORT_F  },
+ { MCU_RUN_MODE ,            MCU_WD_MODULE    ,         MCU_WD_TIMER_0       },
+ { MCU_RUN_MODE ,            MCU_TIMER_MODULE   ,         MCU_TIMER_1     },
 
 };
 

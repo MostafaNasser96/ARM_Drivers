@@ -129,12 +129,14 @@ Error_Return_Type NVIC_init(void)
                 }
             }
        }
-		 }
+
 		
 		if(u8_ErrorStatus == E_OK)  /*If Error Status is Ok Then Init is Done */
 		{
 			g_InitCheck = E_OK;
 		}
+}
+
     else
     {
         /*Nothing*/
